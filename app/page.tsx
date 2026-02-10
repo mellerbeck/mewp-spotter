@@ -19,7 +19,9 @@ export default function Home() {
   Add a MEWP Spot
 </a>
 
-
+<a href="/spots" className="text-sm text-zinc-600 underline dark:text-zinc-400">
+  View my spots
+</a>
 
         <p className="text-sm text-zinc-500 dark:text-zinc-500">
           Coming soon.

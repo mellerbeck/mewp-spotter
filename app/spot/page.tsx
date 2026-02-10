@@ -36,6 +36,7 @@ export default function SpotPage() {
     existing.unshift(spot);
     localStorage.setItem(key, JSON.stringify(existing));
     setStatus("Saved locally ✅");
+    window.location.href = "/spots";
   }
 
   return (
