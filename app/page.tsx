@@ -12,6 +12,11 @@ export default function Home() {
           Spot. Snap. Share the MEWPs you see in the wild.
         </p>
 
+	<button className="mt-6 rounded-full bg-black px-6 py-3 text-white hover:bg-zinc-800 dark:bg-white dark:text-black">
+  Add a MEWP Spot
+</button>
+
+
         <p className="text-sm text-zinc-500 dark:text-zinc-500">
           Coming soon.
         </p>
