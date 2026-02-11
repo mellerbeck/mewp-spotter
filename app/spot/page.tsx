@@ -9,6 +9,8 @@ export default function SpotPage() {
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [status, setStatus] = useState<string>("");
 
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+
   useEffect(() => {
     if (!navigator.geolocation) {
       setStatus("Geolocation not supported.");
@@ -23,6 +25,13 @@ export default function SpotPage() {
     );
   }, []);
 
+  function onPhoto(file: File | null) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setPhotoDataUrl(String(reader.result));
+    reader.readAsDataURL(file);
+  }
+
   function saveLocal() {
     const spot = {
       brand,
@@ -30,6 +39,7 @@ export default function SpotPage() {
       note,
       loc,
       ts: new Date().toISOString(),
+      photoDataUrl,
     };
     const key = "mewp_spots";
     const existing = JSON.parse(localStorage.getItem(key) || "[]");
@@ -88,12 +98,39 @@ export default function SpotPage() {
             />
           </label>
 
+          <label className="grid gap-2">
+            <span className="text-sm">Photo</span>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-black"
+              onChange={(e) => onPhoto(e.target.files?.[0] || null)}
+            />
+          </label>
+
+          {photoDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photoDataUrl}
+              alt="MEWP photo"
+              className="rounded-2xl border border-zinc-200 dark:border-zinc-800"
+            />
+          ) : null}
+
           <button
             onClick={saveLocal}
             className="mt-2 rounded-full bg-black px-6 py-3 text-white hover:bg-zinc-800 dark:bg-white dark:text-black"
           >
             Save spot
           </button>
+
+          <a
+            href="/spots"
+            className="text-sm text-zinc-600 underline dark:text-zinc-400"
+          >
+            View my spots
+          </a>
         </div>
       </main>
     </div>

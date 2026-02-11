@@ -8,6 +8,7 @@ type Spot = {
   note?: string;
   loc: { lat: number; lng: number } | null;
   ts: string;
+  photoDataUrl?: string | null;
 };
 
 export default function SpotsPage() {
@@ -93,6 +94,15 @@ export default function SpotsPage() {
                     No location saved
                   </div>
                 )}
+
+                {s.photoDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={s.photoDataUrl}
+                    alt="MEWP"
+                    className="mt-3 rounded-2xl border border-zinc-200 dark:border-zinc-800"
+                  />
+                ) : null}
               </div>
             ))
           )}
