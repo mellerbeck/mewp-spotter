@@ -1,31 +1,34 @@
-import Image from "next/image";
+import Nav from "./components/Nav";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-3xl flex-col items-center gap-6 py-32 px-16 text-center bg-white dark:bg-black">
-        <h1 className="text-4xl font-bold tracking-tight text-black dark:text-zinc-50">
+    <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
+      <Nav />
+
+      <main className="flex flex-col items-center justify-center px-6 py-32 text-center text-black dark:text-zinc-50">
+        <h1 className="text-4xl font-bold tracking-tight">
           MEWP Spotter
         </h1>
 
-        <p className="max-w-md text-lg text-zinc-600 dark:text-zinc-400">
+        <p className="mt-4 max-w-md text-lg text-zinc-600 dark:text-zinc-400">
           Spot. Snap. Share the MEWPs you see in the wild.
         </p>
 
-	<a
-  href="/spot"
-  className="mt-6 rounded-full bg-black px-6 py-3 text-white hover:bg-zinc-800 dark:bg-white dark:text-black"
->
-  Add a MEWP Spot
-</a>
+        <div className="mt-8 flex gap-4">
+          <a
+            href="/spot"
+            className="rounded-full bg-black px-6 py-3 text-white hover:bg-zinc-800 dark:bg-white dark:text-black"
+          >
+            Add a MEWP Spot
+          </a>
 
-<a href="/spots" className="text-sm text-zinc-600 underline dark:text-zinc-400">
-  View my spots
-</a>
-
-        <p className="text-sm text-zinc-500 dark:text-zinc-500">
-          Coming soon.
-        </p>
+          <a
+            href="/spots"
+            className="rounded-full border border-zinc-200 px-6 py-3 hover:bg-black/[.04] dark:border-zinc-800 dark:hover:bg-white/[.08]"
+          >
+            View My Spots
+          </a>
+        </div>
       </main>
     </div>
   );

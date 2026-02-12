@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Nav from "../components/Nav";
 
 export default function SpotPage() {
   const [brand, setBrand] = useState("Genie");
@@ -41,16 +42,19 @@ export default function SpotPage() {
       ts: new Date().toISOString(),
       photoDataUrl,
     };
+
     const key = "mewp_spots";
     const existing = JSON.parse(localStorage.getItem(key) || "[]");
     existing.unshift(spot);
     localStorage.setItem(key, JSON.stringify(existing));
-    setStatus("Saved locally ✅");
+
     window.location.href = "/spots";
   }
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
+      <Nav />
+
       <main className="mx-auto max-w-2xl px-6 py-16 text-black dark:text-zinc-50">
         <h1 className="text-3xl font-bold">Add a MEWP Spot</h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{status}</p>
@@ -122,15 +126,8 @@ export default function SpotPage() {
             onClick={saveLocal}
             className="mt-2 rounded-full bg-black px-6 py-3 text-white hover:bg-zinc-800 dark:bg-white dark:text-black"
           >
-            Save spot
+            Save Spot
           </button>
-
-          <a
-            href="/spots"
-            className="text-sm text-zinc-600 underline dark:text-zinc-400"
-          >
-            View my spots
-          </a>
         </div>
       </main>
     </div>

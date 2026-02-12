@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Nav from "../components/Nav";
 
 type Spot = {
   brand: string;
@@ -33,6 +34,8 @@ export default function SpotsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
+      <Nav />
+
       <main className="mx-auto max-w-2xl px-6 py-16 text-black dark:text-zinc-50">
         <div className="flex items-baseline justify-between gap-4">
           <div>
@@ -74,12 +77,14 @@ export default function SpotsPage() {
                     <div className="text-lg font-semibold">
                       {s.brand} · {s.type}
                     </div>
-                    {s.note ? (
+
+                    {s.note && (
                       <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                         {s.note}
                       </div>
-                    ) : null}
+                    )}
                   </div>
+
                   <div className="text-xs text-zinc-500">
                     {new Date(s.ts).toLocaleString()}
                   </div>
@@ -95,14 +100,14 @@ export default function SpotsPage() {
                   </div>
                 )}
 
-                {s.photoDataUrl ? (
+                {s.photoDataUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={s.photoDataUrl}
                     alt="MEWP"
                     className="mt-3 rounded-2xl border border-zinc-200 dark:border-zinc-800"
                   />
-                ) : null}
+                )}
               </div>
             ))
           )}
