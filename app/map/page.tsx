@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import Nav from "../components/Nav";
-import L from "leaflet";
 
 type Spot = {
   id: string;
@@ -16,30 +15,36 @@ export default function MapPage() {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!mapDivRef.current) return;
+    let map: any;
 
-    const map = L.map(mapDivRef.current).setView([39.5, -98.35], 4);
+    async function init() {
+      if (!mapDivRef.current) return;
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
-    }).addTo(map);
+      const L = (await import("leaflet")).default;
 
-    fetch("/api/spots", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data?.ok) return;
+      map = L.map(mapDivRef.current).setView([39.5, -98.35], 4);
 
-        (data.spots as Spot[]).forEach((spot) => {
-          if (spot.latitude == null || spot.longitude == null) return;
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
 
-          L.marker([spot.latitude, spot.longitude])
-            .addTo(map)
-            .bindPopup(`${spot.brand} · ${spot.type}`);
-        });
+      const res = await fetch("/api/spots", { cache: "no-store" });
+      const data = await res.json();
+      if (!data?.ok) return;
+
+      (data.spots as Spot[]).forEach((spot) => {
+        if (spot.latitude == null || spot.longitude == null) return;
+
+        L.marker([spot.latitude, spot.longitude])
+          .addTo(map)
+          .bindPopup(`${spot.brand} · ${spot.type}`);
       });
+    }
+
+    init();
 
     return () => {
-      map.remove();
+      if (map) map.remove();
     };
   }, []);
 
