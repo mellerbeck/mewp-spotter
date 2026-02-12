@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { put } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 
 export const runtime = "nodejs";
 
@@ -22,7 +22,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Basic guardrails
     if (!file.type.startsWith("image/")) {
       return NextResponse.json(
         { ok: false, error: "Only image uploads supported" },
@@ -30,7 +29,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const maxBytes = 8 * 1024 * 1024; // 8MB
+    const maxBytes = 8 * 1024 * 1024;
     if (file.size > maxBytes) {
       return NextResponse.json(
         { ok: false, error: "File too large (max 8MB)" },
@@ -52,6 +51,37 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ ok: true, url: blob.url });
+  } catch (err: any) {
+    const msg =
+      process.env.NODE_ENV === "development"
+        ? err?.message || String(err)
+        : "Server error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json(
+        { ok: false, error: "Blob not configured" },
+        { status: 500 }
+      );
+    }
+
+    const body = await req.json();
+    const url = String(body?.url || "").trim();
+
+    if (!url) {
+      return NextResponse.json(
+        { ok: false, error: "Missing url" },
+        { status: 400 }
+      );
+    }
+
+    await del(url);
+
+    return NextResponse.json({ ok: true });
   } catch (err: any) {
     const msg =
       process.env.NODE_ENV === "development"

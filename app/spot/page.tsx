@@ -57,37 +57,60 @@ export default function SpotPage() {
   }
 
   async function saveSpot() {
-    try {
-      setStatus("Saving...");
+  let photo_url: string | null = null;
 
-      const photo_url = await uploadPhotoIfNeeded();
+  try {
+    setStatus("Saving...");
 
-      const res = await fetch("/api/spots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brand,
-          type,
-          model: model.trim() ? model.trim() : null,
-          note: note.trim() ? note.trim() : null,
-          latitude: loc?.lat ?? null,
-          longitude: loc?.lng ?? null,
-          photo_url,
-        }),
-      });
+    photo_url = await uploadPhotoIfNeeded();
 
-      const data = await res.json();
+    const res = await fetch("/api/spots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        brand,
+        type,
+        model: model.trim() ? model.trim() : null,
+        note: note.trim() ? note.trim() : null,
+        latitude: loc?.lat ?? null,
+        longitude: loc?.lng ?? null,
+        photo_url,
+      }),
+    });
 
-      if (!res.ok || !data.ok) {
-        setStatus(data?.error || "Failed to save");
-        return;
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      // DB failed after upload: best-effort cleanup
+      if (photo_url) {
+        await fetch("/api/upload", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: photo_url }),
+        });
       }
 
-      window.location.href = "/spots";
-    } catch (err: any) {
-      setStatus(err?.message || "Failed to save");
+      setStatus(data?.error || "Failed to save");
+      return;
     }
+
+    window.location.href = "/spots";
+  } catch (err: any) {
+    // also cleanup on unexpected errors
+    if (photo_url) {
+      try {
+        await fetch("/api/upload", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: photo_url }),
+        });
+      } catch {}
+    }
+
+    setStatus(err?.message || "Failed to save");
   }
+}
+
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
