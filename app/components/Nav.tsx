@@ -7,6 +7,8 @@ export default function Nav() {
       <div className="flex gap-4 text-sm">
         <a href="/spot">Add Spot</a>
         <a href="/spots">My Spots</a>
+	<a href="/map">Map</a>
+
       </div>
     </nav>
   );
