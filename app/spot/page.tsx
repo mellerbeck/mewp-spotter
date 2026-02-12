@@ -6,10 +6,13 @@ import Nav from "../components/Nav";
 export default function SpotPage() {
   const [brand, setBrand] = useState("Genie");
   const [type, setType] = useState("Boom");
+  const [model, setModel] = useState("");
   const [note, setNote] = useState("");
+
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [status, setStatus] = useState<string>("");
 
+  // Still local-only preview for now (we’ll move to Blob next)
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,22 +36,35 @@ export default function SpotPage() {
     reader.readAsDataURL(file);
   }
 
-  function saveLocal() {
-    const spot = {
-      brand,
-      type,
-      note,
-      loc,
-      ts: new Date().toISOString(),
-      photoDataUrl,
-    };
+  async function saveSpot() {
+    try {
+      setStatus("Saving...");
 
-    const key = "mewp_spots";
-    const existing = JSON.parse(localStorage.getItem(key) || "[]");
-    existing.unshift(spot);
-    localStorage.setItem(key, JSON.stringify(existing));
+      const res = await fetch("/api/spots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brand,
+          type,
+          model: model.trim() ? model.trim() : null,
+          note: note.trim() ? note.trim() : null,
+          latitude: loc?.lat ?? null,
+          longitude: loc?.lng ?? null,
+          photo_url: null, // next step: upload to Blob and send URL
+        }),
+      });
 
-    window.location.href = "/spots";
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setStatus(data?.error || "Failed to save");
+        return;
+      }
+
+      window.location.href = "/spots";
+    } catch {
+      setStatus("Failed to save");
+    }
   }
 
   return (
@@ -93,6 +109,16 @@ export default function SpotPage() {
           </label>
 
           <label className="grid gap-2">
+            <span className="text-sm">Model (optional)</span>
+            <input
+              className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-black"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="e.g., Z-45/25"
+            />
+          </label>
+
+          <label className="grid gap-2">
             <span className="text-sm">Note (optional)</span>
             <input
               className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-black"
@@ -103,7 +129,7 @@ export default function SpotPage() {
           </label>
 
           <label className="grid gap-2">
-            <span className="text-sm">Photo</span>
+            <span className="text-sm">Photo (preview only for now)</span>
             <input
               type="file"
               accept="image/*"
@@ -123,7 +149,7 @@ export default function SpotPage() {
           ) : null}
 
           <button
-            onClick={saveLocal}
+            onClick={saveSpot}
             className="mt-2 rounded-full bg-black px-6 py-3 text-white hover:bg-zinc-800 dark:bg-white dark:text-black"
           >
             Save Spot
