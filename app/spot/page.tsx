@@ -12,8 +12,8 @@ export default function SpotPage() {
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [status, setStatus] = useState<string>("");
 
-  // Still local-only preview for now (we’ll move to Blob next)
-  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -30,15 +30,37 @@ export default function SpotPage() {
   }, []);
 
   function onPhoto(file: File | null) {
-    if (!file) return;
+    setPhotoFile(file);
+    if (!file) {
+      setPhotoPreview(null);
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = () => setPhotoDataUrl(String(reader.result));
+    reader.onload = () => setPhotoPreview(String(reader.result));
     reader.readAsDataURL(file);
+  }
+
+  async function uploadPhotoIfNeeded(): Promise<string | null> {
+    if (!photoFile) return null;
+
+    const form = new FormData();
+    form.append("file", photoFile);
+
+    const res = await fetch("/api/upload", { method: "POST", body: form });
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      throw new Error(data?.error || "Photo upload failed");
+    }
+
+    return data.url as string;
   }
 
   async function saveSpot() {
     try {
       setStatus("Saving...");
+
+      const photo_url = await uploadPhotoIfNeeded();
 
       const res = await fetch("/api/spots", {
         method: "POST",
@@ -50,7 +72,7 @@ export default function SpotPage() {
           note: note.trim() ? note.trim() : null,
           latitude: loc?.lat ?? null,
           longitude: loc?.lng ?? null,
-          photo_url: null, // next step: upload to Blob and send URL
+          photo_url,
         }),
       });
 
@@ -62,8 +84,8 @@ export default function SpotPage() {
       }
 
       window.location.href = "/spots";
-    } catch {
-      setStatus("Failed to save");
+    } catch (err: any) {
+      setStatus(err?.message || "Failed to save");
     }
   }
 
@@ -124,12 +146,12 @@ export default function SpotPage() {
               className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-black"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g., blue, electric, rental yard..."
+              placeholder="e.g., rental yard, electric, blue..."
             />
           </label>
 
           <label className="grid gap-2">
-            <span className="text-sm">Photo (preview only for now)</span>
+            <span className="text-sm">Photo</span>
             <input
               type="file"
               accept="image/*"
@@ -139,11 +161,11 @@ export default function SpotPage() {
             />
           </label>
 
-          {photoDataUrl ? (
+          {photoPreview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={photoDataUrl}
-              alt="MEWP photo"
+              src={photoPreview}
+              alt="MEWP photo preview"
               className="rounded-2xl border border-zinc-200 dark:border-zinc-800"
             />
           ) : null}
