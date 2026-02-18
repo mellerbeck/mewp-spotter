@@ -1,29 +1,33 @@
-"use client";
+import { auth, signIn, signOut } from "@/auth";
 
-import { signIn, signOut, useSession } from "next-auth/react";
-
-export default function AuthButton() {
-  const { data: session, status } = useSession();
-
-  if (status === "loading") return null;
+export default async function AuthButton() {
+  const session = await auth();
 
   if (!session) {
     return (
-      <button
-        onClick={() => signIn("google")}
-        className="text-sm underline text-zinc-600 dark:text-zinc-300"
+      <form
+        action={async () => {
+          "use server";
+          await signIn("google", { redirectTo: "/spots" });
+        }}
       >
-        Sign in
-      </button>
+        <button className="text-sm underline text-zinc-600 dark:text-zinc-300">
+          Sign in
+        </button>
+      </form>
     );
   }
 
   return (
-    <button
-      onClick={() => signOut()}
-      className="text-sm underline text-zinc-600 dark:text-zinc-300"
+    <form
+      action={async () => {
+        "use server";
+        await signOut({ redirectTo: "/" });
+      }}
     >
-      Sign out
-    </button>
+      <button className="text-sm underline text-zinc-600 dark:text-zinc-300">
+        Sign out
+      </button>
+    </form>
   );
 }
