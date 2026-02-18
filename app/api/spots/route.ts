@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import { auth } from "@/auth";
 
 function db() {
   if (!process.env.DATABASE_URL) throw new Error("Database not configured");
@@ -8,13 +9,22 @@ function db() {
 
 export async function GET() {
   try {
+    const session = await auth();
+    const userId = (session?.user as any)?.id as string | undefined;
+
+    if (!userId) {
+      return NextResponse.json({ ok: true, spots: [] });
+    }
+
     const sql = db();
 
     const rows = await sql.query(
       `select id, brand, type, model, note, latitude, longitude, photo_url, created_at
        from spots
+       where user_id = $1
        order by created_at desc
-       limit 200`
+       limit 200`,
+      [userId]
     );
 
     return NextResponse.json({ ok: true, spots: rows });
@@ -29,6 +39,16 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const session = await auth();
+    const userId = (session?.user as any)?.id as string | undefined;
+
+    if (!userId) {
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const sql = db();
     const body = await req.json();
 
@@ -66,10 +86,10 @@ export async function POST(req: Request) {
     }
 
     const rows = await sql.query(
-      `insert into spots (brand, type, model, note, latitude, longitude, photo_url)
-       values ($1,$2,$3,$4,$5,$6,$7)
+      `insert into spots (user_id, brand, type, model, note, latitude, longitude, photo_url)
+       values ($1,$2,$3,$4,$5,$6,$7,$8)
        returning id, created_at`,
-      [brand, type, model, note, latitude, longitude, photo_url]
+      [userId, brand, type, model, note, latitude, longitude, photo_url]
     );
 
     return NextResponse.json({ ok: true, spot: rows[0] });
