@@ -1,7 +1,10 @@
 import Link from "next/link";
 import AuthButton from "./AuthButton";
+import { auth } from "@/auth";
 
-export default function Nav() {
+export default async function Nav() {
+  const session = await auth();
+
   return (
     <nav className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-black">
       <div className="flex items-center gap-6">
@@ -9,29 +12,20 @@ export default function Nav() {
           MEWP Spotter
         </Link>
 
-        <Link
-          href="/spots"
-          className="text-sm text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white"
-        >
+        <Link href="/spots" className="text-sm text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white">
           My Spots
         </Link>
 
-        <Link
-          href="/map"
-          className="text-sm text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white"
-        >
+        <Link href="/map" className="text-sm text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white">
           Map
         </Link>
 
-        <Link
-          href="/spot"
-          className="text-sm text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white"
-        >
+        <Link href="/spot" className="text-sm text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white">
           Add Spot
         </Link>
       </div>
 
-      <AuthButton />
+      <AuthButton signedIn={!!session} />
     </nav>
   );
 }

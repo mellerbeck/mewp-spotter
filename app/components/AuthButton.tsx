@@ -1,33 +1,26 @@
-import { auth, signIn, signOut } from "@/auth";
+"use client";
 
-export default async function AuthButton() {
-  const session = await auth();
+import { useTransition } from "react";
+import { signInGoogle, signOutUser } from "@/app/actions/auth";
 
-  if (!session) {
-    return (
-      <form
-        action={async () => {
-          "use server";
-          await signIn("google", { redirectTo: "/spots" });
-        }}
-      >
-        <button className="text-sm underline text-zinc-600 dark:text-zinc-300">
-          Sign in
-        </button>
-      </form>
-    );
-  }
+export default function AuthButton({ signedIn }: { signedIn: boolean }) {
+  const [pending, start] = useTransition();
 
-  return (
-    <form
-      action={async () => {
-        "use server";
-        await signOut({ redirectTo: "/" });
-      }}
+  return signedIn ? (
+    <button
+      disabled={pending}
+      onClick={() => start(() => signOutUser())}
+      className="text-sm underline text-zinc-600 disabled:opacity-50 dark:text-zinc-300"
     >
-      <button className="text-sm underline text-zinc-600 dark:text-zinc-300">
-        Sign out
-      </button>
-    </form>
+      Sign out
+    </button>
+  ) : (
+    <button
+      disabled={pending}
+      onClick={() => start(() => signInGoogle())}
+      className="text-sm underline text-zinc-600 disabled:opacity-50 dark:text-zinc-300"
+    >
+      Sign in
+    </button>
   );
 }
