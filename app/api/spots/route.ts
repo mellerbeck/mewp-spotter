@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 import { auth } from "@/auth"
+import { del } from "@vercel/blob"
 
 export const runtime = "nodejs"
 
@@ -11,10 +12,7 @@ function db() {
 }
 
 const DAILY_SPOT_LIMIT = 20
-
-function todayISODate() {
-  return new Date().toISOString().slice(0, 10) // YYYY-MM-DD (UTC)
-}
+const todayISODate = () => new Date().toISOString().slice(0, 10)
 
 export async function GET() {
   try {
@@ -58,10 +56,7 @@ export async function POST(req: Request) {
     const userId = session?.user?.id
 
     if (!userId) {
-      return NextResponse.json(
-        { ok: false, error: "Unauthorized" },
-        { status: 401 }
-      )
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
     }
 
     const body = await req.json()
@@ -73,6 +68,7 @@ export async function POST(req: Request) {
 
     const latitude = body.latitude == null ? null : Number(body.latitude)
     const longitude = body.longitude == null ? null : Number(body.longitude)
+
     const photo_url = body.photo_url ? String(body.photo_url).trim() : null
 
     if (!brand || !type) {
@@ -92,7 +88,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // ---- DAILY RATE LIMIT (20 spots per user per day) ----
+    // ---- DAILY RATE LIMIT (20 spots/user/day) ----
     const day = todayISODate()
 
     await db().query(
@@ -118,7 +114,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Create the spot (pending by default / explicit)
     const inserted = await db().query(
       `insert into spots
         (user_id, brand, type, model, note, latitude, longitude, photo_url, status)
@@ -127,7 +122,6 @@ export async function POST(req: Request) {
       [userId, brand, type, model, note, latitude, longitude, photo_url]
     )
 
-    // Increment rate-limit counter only after successful insert
     await db().query(
       `update user_rate_limits
        set spots_created = spots_created + 1
@@ -136,6 +130,66 @@ export async function POST(req: Request) {
     )
 
     return NextResponse.json({ ok: true, spot: inserted[0] })
+  } catch (err: any) {
+    const msg =
+      process.env.NODE_ENV === "development"
+        ? err?.message || String(err)
+        : "Server error"
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await auth()
+    const userId = session?.user?.id
+
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
+    }
+
+    const url = new URL(req.url)
+    const id = url.searchParams.get("id")?.trim()
+
+    if (!id) {
+      return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 })
+    }
+
+    // Look up spot (must belong to user)
+    const found = await db().query(
+      `select photo_url
+       from spots
+       where id = $1 and user_id = $2
+       limit 1`,
+      [id, userId]
+    )
+
+    if (!found[0]) {
+      return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 })
+    }
+
+    const photoUrl = found[0].photo_url as string | null
+
+    // Delete spot (ownership enforced)
+    await db().query(
+      `delete from spots
+       where id = $1 and user_id = $2`,
+      [id, userId]
+    )
+
+    // Best-effort blob cleanup (only if it's in this user's folder)
+    if (photoUrl && process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const pathname = new URL(photoUrl).pathname
+        if (pathname.includes(`/spots/${userId}/`)) {
+          await del(photoUrl)
+        }
+      } catch {
+        // ignore cleanup failures
+      }
+    }
+
+    return NextResponse.json({ ok: true })
   } catch (err: any) {
     const msg =
       process.env.NODE_ENV === "development"
