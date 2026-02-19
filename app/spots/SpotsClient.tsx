@@ -38,6 +38,26 @@ export default function SpotsClient() {
     }
   }
 
+  async function deleteSpot(id: string) {
+    if (!confirm("Delete this spot?")) return
+
+    try {
+      const res = await fetch(`/api/spots?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok || !data.ok) {
+        alert(data?.error || "Failed to delete")
+        return
+      }
+
+      await load()
+    } catch {
+      alert("Failed to delete")
+    }
+  }
+
   useEffect(() => {
     load()
   }, [])
@@ -95,8 +115,16 @@ export default function SpotsClient() {
                   ) : null}
                 </div>
 
-                <div className="text-xs text-zinc-500">
-                  {new Date(s.created_at).toLocaleString()}
+                <div className="flex items-center gap-3">
+                  <div className="text-xs text-zinc-500">
+                    {new Date(s.created_at).toLocaleString()}
+                  </div>
+                  <button
+                    onClick={() => deleteSpot(s.id)}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
 

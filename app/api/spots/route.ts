@@ -2,24 +2,28 @@ import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 import { auth } from "@/auth"
 
+export const runtime = "nodejs"
+
+const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null
 function db() {
-  const url = process.env.DATABASE_URL
-  if (!url) throw new Error("Database not configured")
-  return neon(url)
+  if (!sql) throw new Error("Database not configured")
+  return sql
+}
+
+const DAILY_SPOT_LIMIT = 20
+
+function todayISODate() {
+  return new Date().toISOString().slice(0, 10) // YYYY-MM-DD (UTC)
 }
 
 export async function GET() {
   try {
     const session = await auth()
-    const userId = (session?.user as any)?.id as string | undefined
+    const userId = session?.user?.id
 
-    if (!userId) {
-      return NextResponse.json({ ok: true, spots: [] })
-    }
+    if (!userId) return NextResponse.json({ ok: true, spots: [] })
 
-    const sql = db()
-
-    const spots = await sql.query(
+    const spots = await db().query(
       `select
           id,
           brand,
@@ -29,7 +33,8 @@ export async function GET() {
           latitude,
           longitude,
           photo_url,
-          created_at
+          created_at,
+          status
        from spots
        where user_id = $1
        order by created_at desc
@@ -43,18 +48,14 @@ export async function GET() {
       process.env.NODE_ENV === "development"
         ? err?.message || String(err)
         : "Server error"
-
-    return NextResponse.json(
-      { ok: false, error: msg },
-      { status: 500 }
-    )
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 })
   }
 }
 
 export async function POST(req: Request) {
   try {
     const session = await auth()
-    const userId = (session?.user as any)?.id as string | undefined
+    const userId = session?.user?.id
 
     if (!userId) {
       return NextResponse.json(
@@ -91,29 +92,55 @@ export async function POST(req: Request) {
       )
     }
 
-    const sql = db()
+    // ---- DAILY RATE LIMIT (20 spots per user per day) ----
+    const day = todayISODate()
 
-    const inserted = await sql.query(
+    await db().query(
+      `insert into user_rate_limits (user_id, day)
+       values ($1, $2)
+       on conflict (user_id, day) do nothing`,
+      [userId, day]
+    )
+
+    const limitRows = await db().query(
+      `select spots_created
+       from user_rate_limits
+       where user_id = $1 and day = $2`,
+      [userId, day]
+    )
+
+    const currentCount = Number(limitRows[0]?.spots_created ?? 0)
+
+    if (currentCount >= DAILY_SPOT_LIMIT) {
+      return NextResponse.json(
+        { ok: false, error: `Daily limit reached (${DAILY_SPOT_LIMIT} spots per day)` },
+        { status: 429 }
+      )
+    }
+
+    // Create the spot (pending by default / explicit)
+    const inserted = await db().query(
       `insert into spots
-        (user_id, brand, type, model, note, latitude, longitude, photo_url)
-       values ($1,$2,$3,$4,$5,$6,$7,$8)
-       returning id, created_at`,
+        (user_id, brand, type, model, note, latitude, longitude, photo_url, status)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,'pending')
+       returning id, created_at, status`,
       [userId, brand, type, model, note, latitude, longitude, photo_url]
     )
 
-    return NextResponse.json({
-      ok: true,
-      spot: inserted[0],
-    })
+    // Increment rate-limit counter only after successful insert
+    await db().query(
+      `update user_rate_limits
+       set spots_created = spots_created + 1
+       where user_id = $1 and day = $2`,
+      [userId, day]
+    )
+
+    return NextResponse.json({ ok: true, spot: inserted[0] })
   } catch (err: any) {
     const msg =
       process.env.NODE_ENV === "development"
         ? err?.message || String(err)
         : "Server error"
-
-    return NextResponse.json(
-      { ok: false, error: msg },
-      { status: 500 }
-    )
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 })
   }
 }

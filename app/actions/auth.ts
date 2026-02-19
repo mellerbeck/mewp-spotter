@@ -1,11 +1,11 @@
-"use server";
+"use server"
 
-import { signIn, signOut } from "@/auth";
+import { signIn, signOut } from "@/auth"
 
 export async function signInGoogle() {
-  await signIn("google", { redirectTo: "/spots" });
+  await signIn("google")
 }
 
-export async function signOutUser() {
-  await signOut({ redirectTo: "/" });
+export async function signOutAction() {
+  await signOut()
 }
